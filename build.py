@@ -401,8 +401,8 @@ def build_flutter_dmg(version, features):
     system2('flutter build macos --release')
     '''
     system2(
-        "create-dmg --volname \"KmDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon KmDesk.app 200 190 --hide-extension KmDesk.app kmdesk.dmg ./build/macos/Build/Products/Release/KmDesk.app")
-    os.rename("kmdesk.dmg", f"../kmdesk-{version}.dmg")
+        "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon RustDesk.app 200 190 --hide-extension RustDesk.app rustdesk.dmg ./build/macos/Build/Products/Release/RustDesk.app")
+    os.rename("rustdesk.dmg", f"../rustdesk-{version}.dmg")
     '''
     os.chdir("..")
 
@@ -413,7 +413,7 @@ def build_flutter_arch_manjaro(version, features):
     ffi_bindgen_function_refactor()
     os.chdir('flutter')
     system2('flutter build linux --release')
-    system2(f'strip {flutter_build_dir}/lib/rustdesk.so')
+    system2(f'strip {flutter_build_dir}/lib/librustdesk.so')
     os.chdir('../res')
     system2('HBB=`pwd`/.. FLUTTER=1 makepkg -f')
 
@@ -421,7 +421,7 @@ def build_flutter_arch_manjaro(version, features):
 def build_flutter_windows(version, features, skip_portable_pack):
     if not skip_cargo:
         system2(f'cargo build --features {features} --lib --release')
-        if not os.path.exists("target/release/rustdesk.dll"):
+        if not os.path.exists("target/release/librustdesk.dll"):
             print("cargo build failed, please check rust source code.")
             exit(-1)
     os.chdir('flutter')
@@ -434,19 +434,19 @@ def build_flutter_windows(version, features, skip_portable_pack):
     os.chdir('libs/portable')
     system2('pip3 install -r requirements.txt')
     system2(
-        f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/kmdesk.exe')
+        f'python3 ./generate.py -f ../../{flutter_build_dir_2} -o . -e ../../{flutter_build_dir_2}/rustdesk.exe')
     os.chdir('../..')
-    if os.path.exists('./kmdesk_portable.exe'):
-        os.replace('./target/release/kmdesk-portable-packer.exe',
-                   './kmdesk_portable.exe')
+    if os.path.exists('./rustdesk_portable.exe'):
+        os.replace('./target/release/rustdesk-portable-packer.exe',
+                   './rustdesk_portable.exe')
     else:
-        os.rename('./target/release/kmdesk-portable-packer.exe',
-                  './kmdesk_portable.exe')
+        os.rename('./target/release/rustdesk-portable-packer.exe',
+                  './rustdesk_portable.exe')
     print(
-        f'output location: {os.path.abspath(os.curdir)}/kmdesk_portable.exe')
-    os.rename('./kmdesk_portable.exe', f'./kmdesk-{version}-install.exe')
+        f'output location: {os.path.abspath(os.curdir)}/rustdesk_portable.exe')
+    os.rename('./rustdesk_portable.exe', f'./rustdesk-{version}-install.exe')
     print(
-        f'output location: {os.path.abspath(os.curdir)}/kmdesk-{version}-install.exe')
+        f'output location: {os.path.abspath(os.curdir)}/rustdesk-{version}-install.exe')
 
 
 def main():
@@ -483,23 +483,23 @@ def main():
             build_flutter_windows(version, features, args.skip_portable_pack)
             return
         system2('cargo build --release --features ' + features)
-        # system2('upx.exe target/release/kmdesk.exe')
-        system2('mv target/release/kmdesk.exe target/release/KmDesk.exe')
+        # system2('upx.exe target/release/rustdesk.exe')
+        system2('mv target/release/rustdesk.exe target/release/RustDesk.exe')
         pa = os.environ.get('P')
         if pa:
             # https://certera.com/kb/tutorial-guide-for-safenet-authentication-client-for-code-signing/
             system2(
                 f'signtool sign /a /v /p {pa} /debug /f .\\cert.pfx /t http://timestamp.digicert.com  '
-                'target\\release\\kmdesk.exe')
+                'target\\release\\rustdesk.exe')
         else:
             print('Not signed')
         system2(
-            f'cp -rf target/release/KmDesk.exe {res_dir}')
+            f'cp -rf target/release/RustDesk.exe {res_dir}')
         os.chdir('libs/portable')
         system2('pip3 install -r requirements.txt')
         system2(
-            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/kmdesk-{version}-win7-install.exe')
-        system2('mv ../../{res_dir}/kmdesk-{version}-win7-install.exe ../..')
+            f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
+        system2('mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
     elif os.path.isfile('/usr/bin/pacman'):
         # pacman -S -needed base-devel
         system2("sed -i 's/pkgver=.*/pkgver=%s/g' res/PKGBUILD" % version)
@@ -508,32 +508,32 @@ def main():
         else:
             system2('cargo build --release --features ' + features)
             system2('git checkout src/ui/common.tis')
-            system2('strip target/release/kmdesk')
+            system2('strip target/release/rustdesk')
             system2('ln -s res/pacman_install && ln -s res/PKGBUILD')
             system2('HBB=`pwd` makepkg -f')
-        system2('mv kmdesk-%s-0-x86_64.pkg.tar.zst kmdesk-%s-manjaro-arch.pkg.tar.zst' % (
+        system2('mv rustdesk-%s-0-x86_64.pkg.tar.zst rustdesk-%s-manjaro-arch.pkg.tar.zst' % (
             version, version))
-        # pacman -U ./kmdesk.pkg.tar.zst
+        # pacman -U ./rustdesk.pkg.tar.zst
     elif os.path.isfile('/usr/bin/yum'):
         system2('cargo build --release --features ' + features)
-        system2('strip target/release/kmdesk')
+        system2('strip target/release/rustdesk')
         system2(
             "sed -i 's/Version:    .*/Version:    %s/g' res/rpm.spec" % version)
         system2('HBB=`pwd` rpmbuild -ba res/rpm.spec')
         system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/kmdesk-%s-0.x86_64.rpm ./kmdesk-%s-fedora28-centos8.rpm' % (
+            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-fedora28-centos8.rpm' % (
                 version, version))
-        # yum localinstall kmdesk.rpm
+        # yum localinstall rustdesk.rpm
     elif os.path.isfile('/usr/bin/zypper'):
         system2('cargo build --release --features ' + features)
-        system2('strip target/release/kmdesk')
+        system2('strip target/release/rustdesk')
         system2(
             "sed -i 's/Version:    .*/Version:    %s/g' res/rpm-suse.spec" % version)
         system2('HBB=`pwd` rpmbuild -ba res/rpm-suse.spec')
         system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/kmdesk-%s-0.x86_64.rpm ./kmdesk-%s-suse.rpm' % (
+            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-suse.rpm' % (
                 version, version))
-        # yum localinstall kmdesk.rpm
+        # yum localinstall rustdesk.rpm
     else:
         if flutter:
             if osx:
@@ -541,15 +541,15 @@ def main():
                 pass
             else:
                 # system2(
-                #     'mv target/release/bundle/deb/kmdesk*.deb ./flutter/kmdesk.deb')
+                #     'mv target/release/bundle/deb/rustdesk*.deb ./flutter/rustdesk.deb')
                 build_flutter_deb(version, features)
         else:
             system2('cargo bundle --release --features ' + features)
             if osx:
                 system2(
-                    'strip target/release/bundle/osx/KmDesk.app/Contents/MacOS/kmdesk')
+                    'strip target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk')
                 system2(
-                    'cp libsciter.dylib target/release/bundle/osx/KmDesk.app/Contents/MacOS/')
+                    'cp libsciter.dylib target/release/bundle/osx/RustDesk.app/Contents/MacOS/')
                 # https://github.com/sindresorhus/create-dmg
                 system2('/bin/rm -rf *.dmg')
                 pa = os.environ.get('P')
@@ -557,69 +557,69 @@ def main():
                     system2('''
     # buggy: rcodesign sign ... path/*, have to sign one by one
     # install rcodesign via cargo install apple-codesign
-    #rcodesign sign --p12-file ~/.p12/kmdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/KmDesk.app/Contents/MacOS/kmdesk
-    #rcodesign sign --p12-file ~/.p12/kmdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/KmDesk.app/Contents/MacOS/libsciter.dylib
-    #rcodesign sign --p12-file ~/.p12/kmdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/KmDesk.app
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/rustdesk
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/libsciter.dylib
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./target/release/bundle/osx/RustDesk.app
     # goto "Keychain Access" -> "My Certificates" for below id which starts with "Developer ID Application:"
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/KmDesk.app/Contents/MacOS/*
-    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/KmDesk.app
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app/Contents/MacOS/*
+    codesign -s "Developer ID Application: {0}" --force --options runtime  ./target/release/bundle/osx/RustDesk.app
     '''.format(pa))
                 system2(
-                    'create-dmg "KmDesk %s.dmg" "target/release/bundle/osx/KmDesk.app"' % version)
-                os.rename('KmDesk %s.dmg' %
-                          version, 'kmdesk-%s.dmg' % version)
+                    'create-dmg "RustDesk %s.dmg" "target/release/bundle/osx/RustDesk.app"' % version)
+                os.rename('RustDesk %s.dmg' %
+                          version, 'rustdesk-%s.dmg' % version)
                 if pa:
                     system2('''
     # https://pyoxidizer.readthedocs.io/en/apple-codesign-0.14.0/apple_codesign.html
     # https://pyoxidizer.readthedocs.io/en/stable/tugger_code_signing.html
     # https://developer.apple.com/developer-id/
     # goto xcode and login with apple id, manager certificates (Developer ID Application and/or Developer ID Installer) online there (only download and double click (install) cer file can not export p12 because no private key)
-    #rcodesign sign --p12-file ~/.p12/kmdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./kmdesk-{1}.dmg
-    codesign -s "Developer ID Application: {0}" --force --options runtime ./kmdesk-{1}.dmg
+    #rcodesign sign --p12-file ~/.p12/rustdesk-developer-id.p12 --p12-password-file ~/.p12/.cert-pass --code-signature-flags runtime ./rustdesk-{1}.dmg
+    codesign -s "Developer ID Application: {0}" --force --options runtime ./rustdesk-{1}.dmg
     # https://appstoreconnect.apple.com/access/api
     # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_getting_started.html#apple-codesign-app-store-connect-api-key
     # p8 file is generated when you generate api key (can download only once)
-    rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple kmdesk-{1}.dmg
-    # verify:  spctl -a -t exec -v /Applications/KmDesk.app
+    rcodesign notary-submit --api-key-path ../.p12/api-key.json  --staple rustdesk-{1}.dmg
+    # verify:  spctl -a -t exec -v /Applications/RustDesk.app
     '''.format(pa, version))
                 else:
                     print('Not signed')
             else:
                 # build deb package
                 system2(
-                    'mv target/release/bundle/deb/kmdesk*.deb ./kmdesk.deb')
-                system2('dpkg-deb -R kmdesk.deb tmpdeb')
-                system2('mkdir -p tmpdeb/usr/share/kmdesk/files/systemd/')
+                    'mv target/release/bundle/deb/rustdesk*.deb ./rustdesk.deb')
+                system2('dpkg-deb -R rustdesk.deb tmpdeb')
+                system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
                 system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
                 system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
                 system2(
-                    'cp res/kmdesk.service tmpdeb/usr/share/kmdesk/files/systemd/')
+                    'cp res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
                 system2(
-                    'cp res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/kmdesk.png')
+                    'cp res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
                 system2(
-                    'cp res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/kmdesk.svg')
+                    'cp res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
                 system2(
-                    'cp res/kmdesk.desktop tmpdeb/usr/share/applications/kmdesk.desktop')
+                    'cp res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
                 system2(
-                    'cp res/kmdesk-link.desktop tmpdeb/usr/share/applications/kmdesk-link.desktop')
-                os.system('mkdir -p tmpdeb/etc/kmdesk/')
-                os.system('cp -a res/startwm.sh tmpdeb/etc/kmdesk/')
-                os.system('mkdir -p tmpdeb/etc/X11/kmdesk/')
-                os.system('cp res/xorg.conf tmpdeb/etc/X11/kmdesk/')
+                    'cp res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
+                os.system('mkdir -p tmpdeb/etc/rustdesk/')
+                os.system('cp -a res/startwm.sh tmpdeb/etc/rustdesk/')
+                os.system('mkdir -p tmpdeb/etc/X11/rustdesk/')
+                os.system('cp res/xorg.conf tmpdeb/etc/X11/rustdesk/')
                 os.system('cp -a DEBIAN/* tmpdeb/DEBIAN/')
                 os.system('mkdir -p tmpdeb/etc/pam.d/')
-                os.system('cp pam.d/kmdesk.debian tmpdeb/etc/pam.d/kmdesk')
-                system2('strip tmpdeb/usr/bin/kmdesk')
-                system2('mkdir -p tmpdeb/usr/lib/kmdesk')
-                system2('mv tmpdeb/usr/bin/kmdesk tmpdeb/usr/lib/kmdesk/')
-                system2('cp libsciter-gtk.so tmpdeb/usr/lib/kmdesk/')
-                md5_file('usr/share/kmdesk/files/systemd/kmdesk.service')
-                md5_file('etc/kmdesk/startwm.sh')
-                md5_file('etc/X11/kmdesk/xorg.conf')
-                md5_file('etc/pam.d/kmdesk')
-                md5_file('usr/lib/kmdesk/libsciter-gtk.so')
-                system2('dpkg-deb -b tmpdeb kmdesk.deb; /bin/rm -rf tmpdeb/')
-                os.rename('kmdesk.deb', 'kmdesk-%s.deb' % version)
+                os.system('cp pam.d/rustdesk.debian tmpdeb/etc/pam.d/rustdesk')
+                system2('strip tmpdeb/usr/bin/rustdesk')
+                system2('mkdir -p tmpdeb/usr/lib/rustdesk')
+                system2('mv tmpdeb/usr/bin/rustdesk tmpdeb/usr/lib/rustdesk/')
+                system2('cp libsciter-gtk.so tmpdeb/usr/lib/rustdesk/')
+                md5_file('usr/share/rustdesk/files/systemd/rustdesk.service')
+                md5_file('etc/rustdesk/startwm.sh')
+                md5_file('etc/X11/rustdesk/xorg.conf')
+                md5_file('etc/pam.d/rustdesk')
+                md5_file('usr/lib/rustdesk/libsciter-gtk.so')
+                system2('dpkg-deb -b tmpdeb rustdesk.deb; /bin/rm -rf tmpdeb/')
+                os.rename('rustdesk.deb', 'rustdesk-%s.deb' % version)
 
 
 def md5_file(fn):
