@@ -310,82 +310,82 @@ def build_flutter_deb(version, features):
     os.chdir('flutter')
     system2('flutter build linux --release')
     system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/lib/kmdesk')
-    system2('mkdir -p tmpdeb/etc/kmdesk/')
+    system2('mkdir -p tmpdeb/usr/lib/rustdesk')
+    system2('mkdir -p tmpdeb/etc/rustdesk/')
     system2('mkdir -p tmpdeb/etc/pam.d/')
-    system2('mkdir -p tmpdeb/usr/share/kmdesk/files/systemd/')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
     system2('mkdir -p tmpdeb/usr/share/applications/')
     system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/kmdesk || true')
+    system2('rm tmpdeb/usr/bin/rustdesk || true')
     system2(
-        f'cp -r {flutter_build_dir}/* tmpdeb/usr/lib/kmdesk/')
+        f'cp -r {flutter_build_dir}/* tmpdeb/usr/lib/rustdesk/')
     system2(
-        'cp ../res/kmdesk.service tmpdeb/usr/share/kmdesk/files/systemd/')
+        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
     system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/kmdesk.png')
+        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
     system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/kmdesk.svg')
+        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
     system2(
-        'cp ../res/kmdesk.desktop tmpdeb/usr/share/applications/kmdesk.desktop')
+        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
     system2(
-        'cp ../res/kmdesk-link.desktop tmpdeb/usr/share/applications/kmdesk-link.desktop')
+        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
     system2(
-        'cp ../res/startwm.sh tmpdeb/etc/kmdesk/')
+        'cp ../res/startwm.sh tmpdeb/etc/rustdesk/')
     system2(
-        'cp ../res/xorg.conf tmpdeb/etc/kmdesk/')
+        'cp ../res/xorg.conf tmpdeb/etc/rustdesk/')
     system2(
-        'cp ../res/pam.d/kmdesk.debian tmpdeb/etc/pam.d/kmdesk')
+        'cp ../res/pam.d/rustdesk.debian tmpdeb/etc/pam.d/rustdesk')
     system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/kmdesk/files/polkit && chmod a+x tmpdeb/usr/share/kmdesk/files/polkit")
+        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
 
     system2('mkdir -p tmpdeb/DEBIAN')
     generate_control_file(version)
     system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file('usr/share/kmdesk/files/systemd/kmdesk.service')
-    system2('dpkg-deb -b tmpdeb kmdesk.deb;')
+    md5_file('usr/share/rustdesk/files/systemd/rustdesk.service')
+    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
 
     system2('/bin/rm -rf tmpdeb/')
     system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('kmdesk.deb', '../kmdesk-%s.deb' % version)
+    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
     os.chdir("..")
 
 
 def build_deb_from_folder(version, binary_folder):
     os.chdir('flutter')
     system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/lib/kmdesk')
-    system2('mkdir -p tmpdeb/usr/share/kmdesk/files/systemd/')
+    system2('mkdir -p tmpdeb/usr/lib/rustdesk')
+    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
     system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
     system2('mkdir -p tmpdeb/usr/share/applications/')
     system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/kmdesk || true')
+    system2('rm tmpdeb/usr/bin/rustdesk || true')
     system2(
-        f'cp -r ../{binary_folder}/* tmpdeb/usr/lib/kmdesk/')
+        f'cp -r ../{binary_folder}/* tmpdeb/usr/lib/rustdesk/')
     system2(
-        'cp ../res/kmdesk.service tmpdeb/usr/share/kmdesk/files/systemd/')
+        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
     system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/kmdesk.png')
+        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
     system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/kmdesk.svg')
+        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
     system2(
-        'cp ../res/kmdesk.desktop tmpdeb/usr/share/applications/kmdesk.desktop')
+        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
     system2(
-        'cp ../res/kmdesk-link.desktop tmpdeb/usr/share/applications/kmdesk-link.desktop')
+        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
     system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/kmdesk/files/polkit && chmod a+x tmpdeb/usr/share/kmdesk/files/polkit")
+        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
 
     system2('mkdir -p tmpdeb/DEBIAN')
     generate_control_file(version)
     system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file('usr/share/kmdesk/files/systemd/kmdesk.service')
-    system2('dpkg-deb -b tmpdeb kmdesk.deb;')
+    md5_file('usr/share/rustdesk/files/systemd/rustdesk.service')
+    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
 
     system2('/bin/rm -rf tmpdeb/')
     system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('kmdesk.deb', '../kmdesk-%s.deb' % version)
+    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
     os.chdir("..")
 
 
