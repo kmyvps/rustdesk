@@ -18,7 +18,7 @@ on:
 # in this file!
 
 env:
-  SCITER_RUST_VERSION: "1.75" # https://github.com/kmdesk/kmdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
+  SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   RUST_VERSION: "1.75" # sciter failed on m1 with 1.78 because of https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   CARGO_NDK_VERSION: "3.1.2"
   SCITER_ARMV7_CMAKE_VERSION: "3.29.7"
@@ -143,7 +143,7 @@ jobs:
 
       - name: Build kmdesk
         run: |
-          Invoke-WebRequest -Uri https://github.com/kmdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
           python3 .\build.py --portable --hwcodec --flutter --vram --skip-portable-pack
           Remove-Item -Path usbmmidd_v2\Win32 -Recurse
@@ -313,7 +313,7 @@ jobs:
           mv ./target/release/kmdesk.exe ./Release/kmdesk.exe
           curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
           echo "output_folder=./Release" >> $GITHUB_OUTPUT
-          curl -LJ -o ./usbmmidd_v2.zip https://github.com/kmdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip
+          curl -LJ -o ./usbmmidd_v2.zip https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip
           unzip usbmmidd_v2.zip
           # Do not remove x64 files, because the user may run the 32bit version on a 64bit system.
           # Do not remove ./usbmmidd_v2/deviceinstaller64.exe, as x86 exe cannot install and uninstall drivers when running on x64,
