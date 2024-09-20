@@ -260,7 +260,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install LLVM and Clang
-        uses: kmdesk-org/install-llvm-action-32bit@master
+        uses: rustdesk-org/install-llvm-action-32bit@master
         with:
           version: ${{ env.LLVM_VERSION }}
 
