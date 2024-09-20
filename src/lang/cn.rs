@@ -145,7 +145,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Failed to make direct connection to remote desktop", "无法直接连接到远程桌面"),
         ("Set Password", "设置密码"),
         ("OS Password", "操作系统密码"),
-        ("install_tip", "您正在使用免安装版本,可能会有部分限制,如操作不了,请点击下方安装.本远程软件由快猫云提供服务技术支持>>>www.kmyvps.com<<< 更稳定的高防服务器商."),
+        ("install_tip", "您正在使用免安装版本,可能会有部分限制,如操作不了,请点击下方安装.本远程软件由快猫云提供服务技术支持>>>www.kmyvps.com<<<   更稳定的高防服务器商  "),
         ("Click to upgrade", "点击这里升级"),
         ("Click to download", "点击这里下载"),
         ("Click to update", "点击这里更新"),
