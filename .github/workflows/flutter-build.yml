@@ -1,4 +1,4 @@
-name: Build the flutter version of the RustDesk
+name: Build the flutter version of the KmDesk
 
 on:
   workflow_call:
@@ -14,11 +14,11 @@ on:
 # variables from this workflow!
 #
 # It does NOT read build steps, however, so please fix 'flutter/build_fdroid.sh
-# whenever you add changes to Android CI build action ('build-rustdesk-android')
+# whenever you add changes to Android CI build action ('build-kmdesk-android')
 # in this file!
 
 env:
-  SCITER_RUST_VERSION: "1.75" # https://github.com/rustdesk/rustdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
+  SCITER_RUST_VERSION: "1.75" # https://github.com/kmdesk/kmdesk/discussions/7503, also 1.78 has ABI change which causes our sciter version not working, https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   RUST_VERSION: "1.75" # sciter failed on m1 with 1.78 because of https://blog.rust-lang.org/2024/03/30/i128-layout-update.html
   CARGO_NDK_VERSION: "3.1.2"
   SCITER_ARMV7_CMAKE_VERSION: "3.29.7"
@@ -46,8 +46,8 @@ env:
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
 
 jobs:
-  build-RustDeskTempTopMostWindow:
-    uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
+  build-KmDeskTempTopMostWindow:
+    uses: ./.github/workflows/third-party-KmDeskTempTopMostWindow.yml
     with:
       upload-artifact: ${{ inputs.upload-artifact }}
       target: windows-2022
@@ -59,7 +59,7 @@ jobs:
 
   build-for-windows-flutter:
     name: ${{ matrix.job.target }}
-    needs: [build-RustDeskTempTopMostWindow]
+    needs: [build-KmDeskTempTopMostWindow]
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -141,15 +141,15 @@ jobs:
           fi
         shell: bash
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         run: |
-          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+          Invoke-WebRequest -Uri https://github.com/kmdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
           python3 .\build.py --portable --hwcodec --flutter --vram --skip-portable-pack
           Remove-Item -Path usbmmidd_v2\Win32 -Recurse
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
-          mv ./flutter/build/windows/x64/runner/Release ./rustdesk
-          mv -Force .\usbmmidd_v2 ./rustdesk
+          mv ./flutter/build/windows/x64/runner/Release ./kmdesk
+          mv -Force .\usbmmidd_v2 ./kmdesk
 
       - name: find Runner.res
         # Windows: find Runner.res (compiled from ./flutter/windows/runner/Runner.rc), copy to ./Runner.res
@@ -167,26 +167,26 @@ jobs:
             ls -l ./libs/portable/Runner.res;
           fi
 
-      - name: Download RustDeskTempTopMostWindow artifacts
+      - name: Download KmDeskTempTopMostWindow artifacts
         uses: actions/download-artifact@master
         if: ${{ inputs.upload-artifact }}
         with:
           name: topmostwindow-artifacts
-          path: "./rustdesk"
+          path: "./kmdesk"
 
       - name: Upload unsigned
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@master
         with:
-          name: rustdesk-unsigned-windows-${{ matrix.job.arch }}
-          path: rustdesk
+          name: kmdesk-unsigned-windows-${{ matrix.job.arch }}
+          path: kmdesk
 
-      - name: Sign rustdesk files
+      - name: Sign kmdesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
         shell: bash
         run: |
           pip3 install requests argparse
-          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./rustdesk/
+          BASE_URL=${{ secrets.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./kmdesk/
 
       - name: Build self-extracted executable
         shell: bash
@@ -195,10 +195,10 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../kmdesk/ -o . -e ../../kmdesk/kmdesk.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
+          mv ./target/release/kmdesk-portable-packer.exe ./SignOutput/kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -207,13 +207,13 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
           pushd ./res/msi
-          python preprocess.py --arp -d ../../rustdesk
+          python preprocess.py --arp -d ../../kmdesk
           nuget restore msi.sln
           msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
-          mv ./Package/bin/x64/Release/en-us/Package.msi ../../SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
-          sha256sum ../../SignOutput/rustdesk-*.msi
+          mv ./Package/bin/x64/Release/en-us/Package.msi ../../SignOutput/kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.msi
+          sha256sum ../../SignOutput/kmdesk-*.msi
 
-      - name: Sign rustdesk self-extracted file
+      - name: Sign kmdesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
         shell: bash
         run: |
@@ -226,8 +226,8 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ./SignOutput/rustdesk-*.msi
-            ./SignOutput/rustdesk-*.exe
+            ./SignOutput/kmdesk-*.msi
+            ./SignOutput/kmdesk-*.exe
 
   # The fallback for the flutter version, we use Sciter for 32bit Windows.
   build-for-windows-sciter:
@@ -260,7 +260,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install LLVM and Clang
-        uses: rustdesk-org/install-llvm-action-32bit@master
+        uses: kmdesk-org/install-llvm-action-32bit@master
         with:
           version: ${{ env.LLVM_VERSION }}
 
@@ -301,7 +301,7 @@ jobs:
           fi
         shell: bash
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         id: build
         shell: bash
         run: |
@@ -310,10 +310,10 @@ jobs:
           sed -i 's/branch = "dyn"/branch = "dyn_x86"/g' ./Cargo.toml
           cargo build --features inline,vram,hwcodec --release --bins
           mkdir -p ./Release
-          mv ./target/release/rustdesk.exe ./Release/rustdesk.exe
+          mv ./target/release/kmdesk.exe ./Release/kmdesk.exe
           curl -LJ -o ./Release/sciter.dll https://github.com/c-smile/sciter-sdk/raw/master/bin.win/x32/sciter.dll
           echo "output_folder=./Release" >> $GITHUB_OUTPUT
-          curl -LJ -o ./usbmmidd_v2.zip https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip
+          curl -LJ -o ./usbmmidd_v2.zip https://github.com/kmdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip
           unzip usbmmidd_v2.zip
           # Do not remove x64 files, because the user may run the 32bit version on a 64bit system.
           # Do not remove ./usbmmidd_v2/deviceinstaller64.exe, as x86 exe cannot install and uninstall drivers when running on x64,
@@ -337,7 +337,7 @@ jobs:
             ls -l ./libs/portable/Runner.res;
           fi
 
-      - name: Sign rustdesk files
+      - name: Sign kmdesk files
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
         shell: bash
         run: |
@@ -350,12 +350,12 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../Release/ -o . -e ../../Release/rustdesk.exe
+          python3 ./generate.py -f ../../Release/ -o . -e ../../Release/kmdesk.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
+          mv ./target/release/kmdesk-portable-packer.exe ./SignOutput/kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}-sciter.exe
 
-      - name: Sign rustdesk self-extracted file
+      - name: Sign kmdesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != ''
         shell: bash
         run: |
@@ -368,7 +368,7 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ./SignOutput/rustdesk-*.exe
+            ./SignOutput/kmdesk-*.exe
 
   build-for-macOS-arm64-selfhost:
     # use build-for-macOS instead
@@ -392,7 +392,7 @@ jobs:
           pushd flutter && flutter pub get && popd
           ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/macos/Runner/bridge_generated.h
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         run: |
           ./build.py --flutter --hwcodec
 
@@ -402,14 +402,14 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}-arm64.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
+          create-dmg --icon "KmDesk.app" 200 190 --hide-extension "KmDesk.app" --window-size 800 400 --app-drop-link 600 185 kmdesk-${{ env.VERSION }}-arm64.dmg ./flutter/build/macos/Build/Products/Release/KmDesk.app
 
       - name: Upload unsigned macOS app
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@master
         with:
-          name: rustdesk-unsigned-macos-arm64
-          path: rustdesk-${{ env.VERSION }}-arm64.dmg # can not upload the directory directly or tar.gz file, which destroy the link structure, causing the codesign failed
+          name: kmdesk-unsigned-macos-arm64
+          path: kmdesk-${{ env.VERSION }}-arm64.dmg # can not upload the directory directly or tar.gz file, which destroy the link structure, causing the codesign failed
 
       - name: Codesign app and create signed dmg
         if: env.MACOS_P12_BASE64 != null && env.UPLOAD_ARTIFACT == 'true'
@@ -418,18 +418,18 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          # start sign the rustdesk.app and dmg
+          # start sign the kmdesk.app and dmg
           rm -rf *.dmg || true
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/RustDesk.app -vvv
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict rustdesk-${{ env.VERSION }}.dmg -vvv
-          # notarize the rustdesk-${{ env.VERSION }}.dmg
-          rcodesign notary-submit --api-key-path ~/.p12/api-key.json  --staple rustdesk-${{ env.VERSION }}.dmg
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/KmDesk.app -vvv
+          create-dmg --icon "KmDesk.app" 200 190 --hide-extension "KmDesk.app" --window-size 800 400 --app-drop-link 600 185 kmdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/KmDesk.app
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict kmdesk-${{ env.VERSION }}.dmg -vvv
+          # notarize the kmdesk-${{ env.VERSION }}.dmg
+          rcodesign notary-submit --api-key-path ~/.p12/api-key.json  --staple kmdesk-${{ env.VERSION }}.dmg
 
-      - name: Rename rustdesk
+      - name: Rename kmdesk
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
-          for name in rustdesk*??.dmg; do
+          for name in kmdesk*??.dmg; do
               mv "$name" "${name%%.dmg}-aarch64.dmg"
           done
 
@@ -440,11 +440,11 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            rustdesk*-aarch64.dmg
+            kmdesk*-aarch64.dmg
 
-  build-rustdesk-ios:
+  build-kmdesk-ios:
     if: ${{ inputs.upload-artifact }}
-    name: build rustdesk ios ipa
+    name: build kmdesk ios ipa
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -507,7 +507,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: rustdesk-lib-cache-ios
+          prefix-key: kmdesk-lib-cache-ios
           key: ${{ matrix.job.target }}
 
       - name: Install flutter rust bridge deps
@@ -517,12 +517,12 @@ jobs:
           pushd flutter && flutter pub get && popd
           ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/ios/Runner/bridge_generated.h
 
-      - name: Build rustdesk lib
+      - name: Build kmdesk lib
         run: |
           rustup target add ${{ matrix.job.target }}
           cargo build --features flutter,hwcodec --release --target aarch64-apple-ios --lib
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         shell: bash
         run: |
           pushd flutter
@@ -534,7 +534,7 @@ jobs:
       #   # if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
       #   uses: actions/upload-artifact@master
       #   with:
-      #     name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+      #     name: kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
       #     path: flutter/build/ios/ipa/*.ipa
 
       # - name: Publish ipa package
@@ -546,7 +546,7 @@ jobs:
       #     files: |
       #       flutter/build/ios/ipa/*.ipa
 
-  build-rustdesk-ios-selfhost:
+  build-kmdesk-ios-selfhost:
     #if: ${{ inputs.upload-artifact }}
     if: false
     runs-on: [self-hosted, macOS, ARM64]
@@ -572,11 +572,11 @@ jobs:
           pushd flutter && flutter pub get && popd
           ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart --c-output ./flutter/ios/Runner/bridge_generated.h
 
-      - name: Build rustdesk lib
+      - name: Build kmdesk lib
         run: |
           cargo build --features flutter,hwcodec --release --target aarch64-apple-ios --lib
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         # ios sdk not installed on this machine, I will install it later after I am back home
         if: false
         shell: bash
@@ -590,7 +590,7 @@ jobs:
       #   # if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
       #   uses: actions/upload-artifact@master
       #   with:
-      #     name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+      #     name: kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
       #     path: flutter/build/ios/ipa/*.ipa
 
       # - name: Publish ipa package
@@ -639,12 +639,12 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.MACOS_P12_BASE64 }}
           p12-password: ${{ secrets.MACOS_P12_PASSWORD }}
-          keychain: rustdesk
-
+          keychain: kmdesk
+          
       - name: Check sign and import sign key
         if: env.MACOS_P12_BASE64 != null
         run: |
-          security default-keychain -s rustdesk.keychain
+          security default-keychain -s kmdesk.keychain
           security find-identity -v
 
       - name: Import notarize key
@@ -652,7 +652,7 @@ jobs:
         uses: timheuer/base64-to-file@v1.2
         with:
           # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_rcodesign.html#notarizing-and-stapling
-          fileName: rustdesk.json
+          fileName: kmdesk.json
           fileDir: ${{ github.workspace }}
           encodedString: ${{ secrets.MACOS_NOTARIZE_JSON }}
 
@@ -733,7 +733,7 @@ jobs:
           cargo -V
           rustc -V
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         run: |
           ./build.py --flutter --hwcodec ${{ matrix.job.extra-build-args }}
 
@@ -743,14 +743,14 @@ jobs:
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
+          create-dmg --icon "KmDesk.app" 200 190 --hide-extension "KmDesk.app" --window-size 800 400 --app-drop-link 600 185 kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/KmDesk.app
 
       - name: Upload unsigned macOS app
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@master
         with:
-          name: rustdesk-unsigned-macos-${{ matrix.job.arch }}
-          path: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg # can not upload the directory directly or tar.gz, which destroy the link structure, causing the codesign failed
+          name: kmdesk-unsigned-macos-${{ matrix.job.arch }}
+          path: kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg # can not upload the directory directly or tar.gz, which destroy the link structure, causing the codesign failed
 
       - name: Codesign app and create signed dmg
         if: env.MACOS_P12_BASE64 != null && env.UPLOAD_ARTIFACT == 'true'
@@ -760,20 +760,20 @@ jobs:
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
           # Unlock keychain
-          security default-keychain -s rustdesk.keychain
-          security unlock-keychain -p ${{ secrets.MACOS_P12_PASSWORD }} rustdesk.keychain
-          # start sign the rustdesk.app and dmg
+          security default-keychain -s kmdesk.keychain
+          security unlock-keychain -p ${{ secrets.MACOS_P12_PASSWORD }} kmdesk.keychain
+          # start sign the kmdesk.app and dmg
           rm -rf *.dmg || true
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/RustDesk.app -vvv
-          create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
-          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict rustdesk-${{ env.VERSION }}.dmg -vvv
-          # notarize the rustdesk-${{ env.VERSION }}.dmg
-          rcodesign notary-submit --api-key-path ${{ github.workspace }}/rustdesk.json  --staple rustdesk-${{ env.VERSION }}.dmg
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict ./flutter/build/macos/Build/Products/Release/KmDesk.app -vvv
+          create-dmg --icon "KmDesk.app" 200 190 --hide-extension "KmDesk.app" --window-size 800 400 --app-drop-link 600 185 kmdesk-${{ env.VERSION }}.dmg ./flutter/build/macos/Build/Products/Release/KmDesk.app
+          codesign --force --options runtime -s ${{ secrets.MACOS_CODESIGN_IDENTITY }} --deep --strict kmdesk-${{ env.VERSION }}.dmg -vvv
+          # notarize the kmdesk-${{ env.VERSION }}.dmg
+          rcodesign notary-submit --api-key-path ${{ github.workspace }}/kmdesk.json  --staple kmdesk-${{ env.VERSION }}.dmg
 
-      - name: Rename rustdesk
+      - name: Rename kmdesk
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
-          for name in rustdesk*??.dmg; do
+          for name in kmdesk*??.dmg; do
               mv "$name" "${name%%.dmg}-${{ matrix.job.arch }}.dmg"
           done
 
@@ -784,7 +784,7 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            rustdesk*-${{ matrix.job.arch }}.dmg
+            kmdesk*-${{ matrix.job.arch }}.dmg
 
   publish_unsigned:
     needs:
@@ -796,38 +796,38 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@master
         with:
-          name: rustdesk-unsigned-macos-x86_64
+          name: kmdesk-unsigned-macos-x86_64
           path: ./
 
       - name: Download Artifacts
         uses: actions/download-artifact@master
         with:
-          name: rustdesk-unsigned-macos-aarch64
+          name: kmdesk-unsigned-macos-aarch64
           path: ./
 
       - name: Download Artifacts
         uses: actions/download-artifact@master
         with:
-          name: rustdesk-unsigned-windows-x86_64
+          name: kmdesk-unsigned-windows-x86_64
           path: ./windows-x86_64/
 
       - name: Combine unsigned app
         run: |
-          tar czf rustdesk-${{ env.VERSION }}-unsigned.tar.gz *.dmg windows-x86_64
+          tar czf kmdesk-${{ env.VERSION }}-unsigned.tar.gz *.dmg windows-x86_64
 
       - name: Publish unsigned app
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
-          files: rustdesk-${{ env.VERSION }}-unsigned.tar.gz
+          files: kmdesk-${{ env.VERSION }}-unsigned.tar.gz
 
   generate-bridge-linux:
     uses: ./.github/workflows/bridge.yml
 
-  build-rustdesk-android:
+  build-kmdesk-android:
     needs: [generate-bridge-linux]
-    name: build rustdesk android apk ${{ matrix.job.target }}
+    name: build kmdesk android apk ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.os }}
     strategy:
       fail-fast: false
@@ -970,7 +970,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: rustdesk-lib-cache-android # TODO: drop '-android' part after caches are invalidated
+          prefix-key: kmdesk-lib-cache-android # TODO: drop '-android' part after caches are invalidated
           key: ${{ matrix.job.target }}
 
       - name: fix android for flutter 3.13
@@ -983,7 +983,7 @@ jobs:
           cd lib
           find . | grep dart | xargs sed -i 's/textScaler: TextScaler.linear(\(.*\)),/textScaleFactor: \1,/g'
 
-      - name: Build rustdesk lib
+      - name: Build kmdesk lib
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
@@ -994,32 +994,32 @@ jobs:
             aarch64-linux-android)
               ./flutter/ndk_arm64.sh
               mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/libkmdesk.so
             ;;
             armv7-linux-androideabi)
               ./flutter/ndk_arm.sh
               mkdir -p ./flutter/android/app/src/main/jniLibs/armeabi-v7a
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/libkmdesk.so
             ;;
             x86_64-linux-android)
               ./flutter/ndk_x64.sh
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86_64
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/libkmdesk.so
             ;;
             i686-linux-android)
               ./flutter/ndk_x86.sh
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86/libkmdesk.so
             ;;
           esac
 
-      - name: Upload Rustdesk library to Artifacts
+      - name: Upload KmDesk library to Artifacts
         uses: actions/upload-artifact@master
         with:
-          name: librustdesk.so.${{ matrix.job.target }}
-          path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
+          name: libkmdesk.so.${{ matrix.job.target }}
+          path: ./target/${{ matrix.job.target }}/release/liblibkmdesk.so
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
@@ -1031,48 +1031,48 @@ jobs:
             aarch64-linux-android)
               mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
               cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/libkmdesk.so
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm64 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-arm64-v8a-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-arm64-v8a-${{ matrix.job.reltype }}.apk ../kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             armv7-linux-androideabi)
               mkdir -p ./flutter/android/app/src/main/jniLibs/armeabi-v7a
               cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/libkmdesk.so
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm --split-per-abi
-              mv build/app/outputs/flutter-apk/app-armeabi-v7a-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-armeabi-v7a-${{ matrix.job.reltype }}.apk ../kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             x86_64-linux-android)
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86_64
               cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/x86_64/
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/libkmdesk.so
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-x64 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-x86_64-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-x86_64-${{ matrix.job.reltype }}.apk ../kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             i686-linux-android)
               mkdir -p ./flutter/android/app/src/main/jniLibs/x86
               cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/i686-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/x86/
-              cp ./target/${{ matrix.job.target }}/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86/librustdesk.so
+              cp ./target/${{ matrix.job.target }}/release/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86/libkmdesk.so
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-x86 --split-per-abi
-              mv build/app/outputs/flutter-apk/app-x86-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
+              mv build/app/outputs/flutter-apk/app-x86-${{ matrix.job.reltype }}.apk ../kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
           esac
           popd
           mkdir -p signed-apk; pushd signed-apk
-          mv ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk .
+          mv ../kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk .
 
       - uses: r0adkll/sign-android-release@v1
         name: Sign app APK
         if: env.ANDROID_SIGNING_KEY != null
-        id: sign-rustdesk
+        id: sign-kmdesk
         with:
           releaseDirectory: ./signed-apk
           signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
@@ -1087,8 +1087,8 @@ jobs:
         if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@master
         with:
-          name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
-          path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+          name: kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+          path: ${{steps.sign-kmdesk.outputs.signedReleaseFile}}
 
       - name: Publish signed apk package
         if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
@@ -1097,7 +1097,7 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+            ${{steps.sign-kmdesk.outputs.signedReleaseFile}}
 
       - name: Publish unsigned apk package
         if: env.ANDROID_SIGNING_KEY == null && env.UPLOAD_ARTIFACT == 'true'
@@ -1106,11 +1106,11 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            signed-apk/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+            signed-apk/kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
 
-  build-rustdesk-android-universal:
-    needs: [build-rustdesk-android]
-    name: build rustdesk android universal apk
+  build-kmdesk-android-universal:
+    needs: [build-kmdesk-android]
+    name: build kmdesk android universal apk
     if: ${{ inputs.upload-artifact }}
     runs-on: ubuntu-20.04
     env:
@@ -1185,29 +1185,29 @@ jobs:
           name: bridge-artifact
           path: ./
 
-      - name: Download Rustdesk library from Artifacts
+      - name: Download KmDesk library from Artifacts
         uses: actions/download-artifact@master
         with:
-          name: librustdesk.so.aarch64-linux-android
+          name: libkmdesk.so.aarch64-linux-android
           path: ./flutter/android/app/src/main/jniLibs/arm64-v8a
 
-      - name: Download Rustdesk library from Artifacts
+      - name: Download KmDesk library from Artifacts
         uses: actions/download-artifact@master
         with:
-          name: librustdesk.so.armv7-linux-androideabi
+          name: libkmdesk.so.armv7-linux-androideabi
           path: ./flutter/android/app/src/main/jniLibs/armeabi-v7a
 
-      - name: Download Rustdesk library from Artifacts
+      - name: Download KmDesk library from Artifacts
         uses: actions/download-artifact@master
         with:
-          name: librustdesk.so.x86_64-linux-android
+          name: libkmdesk.so.x86_64-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86_64
 
-      - name: Download Rustdesk library from Artifacts
+      - name: Download KmDesk library from Artifacts
         if: ${{ env.reltype == 'debug' }}
         uses: actions/download-artifact@master
         with:
-          name: librustdesk.so.i686-linux-android
+          name: libkmdesk.so.i686-linux-android
           path: ./flutter/android/app/src/main/jniLibs/x86
 
       - name: fix android for flutter 3.13
@@ -1220,7 +1220,7 @@ jobs:
           cd lib
           find . | grep dart | xargs sed -i 's/textScaler: TextScaler.linear(\(.*\)),/textScaleFactor: \1,/g'
 
-      - name: Build rustdesk
+      - name: Build kmdesk
         shell: bash
         env:
           JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
@@ -1228,14 +1228,14 @@ jobs:
           export PATH=/usr/lib/jvm/java-11-openjdk-amd64/bin:$PATH
           # temporary use debug sign config
           sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
-          mv ./flutter/android/app/src/main/jniLibs/arm64-v8a/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
+          mv ./flutter/android/app/src/main/jniLibs/arm64-v8a/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/libkmdesk.so
           cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/
-          mv ./flutter/android/app/src/main/jniLibs/armeabi-v7a/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/librustdesk.so
+          mv ./flutter/android/app/src/main/jniLibs/armeabi-v7a/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/libkmdesk.so
           cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so ./flutter/android/app/src/main/jniLibs/armeabi-v7a/
-          mv ./flutter/android/app/src/main/jniLibs/x86_64/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/librustdesk.so
+          mv ./flutter/android/app/src/main/jniLibs/x86_64/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86_64/libkmdesk.so
           cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/x86_64/
           if [ "${{ env.reltype }}" = "debug" ]; then
-            mv ./flutter/android/app/src/main/jniLibs/x86/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/x86/librustdesk.so
+            mv ./flutter/android/app/src/main/jniLibs/x86/liblibkmdesk.so ./flutter/android/app/src/main/jniLibs/x86/libkmdesk.so
             cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/i686-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/x86/
           fi
           # build flutter
@@ -1243,12 +1243,12 @@ jobs:
           flutter build apk "--${{ env.reltype }}" --target-platform android-arm64,android-arm,android-x64${{ env.x86_target }}
           popd
           mkdir -p signed-apk
-          mv ./flutter/build/app/outputs/flutter-apk/app-${{ env.reltype }}.apk signed-apk/rustdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
+          mv ./flutter/build/app/outputs/flutter-apk/app-${{ env.reltype }}.apk signed-apk/kmdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
       - uses: r0adkll/sign-android-release@v1
         name: Sign app APK
         if: env.ANDROID_SIGNING_KEY != null
-        id: sign-rustdesk
+        id: sign-kmdesk
         with:
           releaseDirectory: ./signed-apk
           signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
@@ -1263,8 +1263,8 @@ jobs:
         if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@master
         with:
-          name: rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
-          path: ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+          name: kmdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.apk
+          path: ${{steps.sign-kmdesk.outputs.signedReleaseFile}}
 
       - name: Publish signed apk package
         if: env.ANDROID_SIGNING_KEY != null && env.UPLOAD_ARTIFACT == 'true'
@@ -1273,7 +1273,7 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+            ${{steps.sign-kmdesk.outputs.signedReleaseFile}}
 
       - name: Publish unsigned apk package
         if: env.ANDROID_SIGNING_KEY == null && env.UPLOAD_ARTIFACT == 'true'
@@ -1282,5 +1282,5 @@ jobs:
           prerelease: true
           tag_name: ${{ env.TAG_NAME }}
           files: |
-            signed-apk/rustdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
+            signed-apk/kmdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
