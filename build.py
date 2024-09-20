@@ -25,17 +25,7 @@ flutter_build_dir_2 = f'flutter/{flutter_build_dir}'
 skip_cargo = False
 
 
-def get_deb_arch() -> str:
-    custom_arch = os.environ.get("DEB_ARCH")
-    if custom_arch is None:
-        return "amd64"
-    return custom_arch
 
-def get_deb_extra_depends() -> str:
-    custom_arch = os.environ.get("DEB_ARCH")
-    if custom_arch == "armhf": # for arm32v7 libsciter-gtk.so
-        return ", libatomic1"
-    return ""
 
 def system2(cmd):
     exit_code = os.system(cmd)
@@ -150,36 +140,7 @@ def make_parser():
 #
 # it assumes all build dependencies are installed in environments
 # Note: do not use it in bare metal, or may break build environments
-def generate_build_script_for_docker():
-    with open("/tmp/build.sh", "w") as f:
-        f.write('''
-            #!/bin/bash
-            # environment
-            export CPATH="$(clang -v 2>&1 | grep "Selected GCC installation: " | cut -d' ' -f4-)/include"
-            # flutter
-            pushd /opt
-            wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.0.5-stable.tar.xz
-            tar -xvf flutter_linux_3.0.5-stable.tar.xz
-            export PATH=`pwd`/flutter/bin:$PATH
-            popd
-            # flutter_rust_bridge
-            dart pub global activate ffigen --version 5.0.1
-            pushd /tmp && git clone https://github.com/SoLongAndThanksForAllThePizza/flutter_rust_bridge --depth=1 && popd
-            pushd /tmp/flutter_rust_bridge/frb_codegen && cargo install --path . && popd
-            pushd flutter && flutter pub get && popd
-            ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart
-            # install vcpkg
-            pushd /opt
-            export VCPKG_ROOT=`pwd`/vcpkg
-            git clone https://github.com/microsoft/vcpkg
-            vcpkg/bootstrap-vcpkg.sh
-            popd
-            $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed"
-            # build rustdesk
-            ./build.py --flutter --hwcodec
-        ''')
-    system2("chmod +x /tmp/build.sh")
-    system2("bash /tmp/build.sh")
+
 
 
 # Downloading third party resources is deprecated.
@@ -303,90 +264,7 @@ def ffi_bindgen_function_refactor():
         'sed -i "s/ffi.NativeFunction<ffi.Bool Function(DartPort/ffi.NativeFunction<ffi.Uint8 Function(DartPort/g" flutter/lib/generated_bridge.dart')
 
 
-def build_flutter_deb(version, features):
-    if not skip_cargo:
-        system2(f'cargo build --features {features} --lib --release')
-        ffi_bindgen_function_refactor()
-    os.chdir('flutter')
-    system2('flutter build linux --release')
-    system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/lib/rustdesk')
-    system2('mkdir -p tmpdeb/etc/rustdesk/')
-    system2('mkdir -p tmpdeb/etc/pam.d/')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
-    system2('mkdir -p tmpdeb/usr/share/applications/')
-    system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/rustdesk || true')
-    system2(
-        f'cp -r {flutter_build_dir}/* tmpdeb/usr/lib/rustdesk/')
-    system2(
-        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
-    system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
-    system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
-    system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
-    system2(
-        'cp ../res/startwm.sh tmpdeb/etc/rustdesk/')
-    system2(
-        'cp ../res/xorg.conf tmpdeb/etc/rustdesk/')
-    system2(
-        'cp ../res/pam.d/rustdesk.debian tmpdeb/etc/pam.d/rustdesk')
-    system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
 
-    system2('mkdir -p tmpdeb/DEBIAN')
-    generate_control_file(version)
-    system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file('usr/share/rustdesk/files/systemd/rustdesk.service')
-    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
-
-    system2('/bin/rm -rf tmpdeb/')
-    system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
-    os.chdir("..")
-
-
-def build_deb_from_folder(version, binary_folder):
-    os.chdir('flutter')
-    system2('mkdir -p tmpdeb/usr/bin/')
-    system2('mkdir -p tmpdeb/usr/lib/rustdesk')
-    system2('mkdir -p tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/256x256/apps/')
-    system2('mkdir -p tmpdeb/usr/share/icons/hicolor/scalable/apps/')
-    system2('mkdir -p tmpdeb/usr/share/applications/')
-    system2('mkdir -p tmpdeb/usr/share/polkit-1/actions')
-    system2('rm tmpdeb/usr/bin/rustdesk || true')
-    system2(
-        f'cp -r ../{binary_folder}/* tmpdeb/usr/lib/rustdesk/')
-    system2(
-        'cp ../res/rustdesk.service tmpdeb/usr/share/rustdesk/files/systemd/')
-    system2(
-        'cp ../res/128x128@2x.png tmpdeb/usr/share/icons/hicolor/256x256/apps/rustdesk.png')
-    system2(
-        'cp ../res/scalable.svg tmpdeb/usr/share/icons/hicolor/scalable/apps/rustdesk.svg')
-    system2(
-        'cp ../res/rustdesk.desktop tmpdeb/usr/share/applications/rustdesk.desktop')
-    system2(
-        'cp ../res/rustdesk-link.desktop tmpdeb/usr/share/applications/rustdesk-link.desktop')
-    system2(
-        "echo \"#!/bin/sh\" >> tmpdeb/usr/share/rustdesk/files/polkit && chmod a+x tmpdeb/usr/share/rustdesk/files/polkit")
-
-    system2('mkdir -p tmpdeb/DEBIAN')
-    generate_control_file(version)
-    system2('cp -a ../res/DEBIAN/* tmpdeb/DEBIAN/')
-    md5_file('usr/share/rustdesk/files/systemd/rustdesk.service')
-    system2('dpkg-deb -b tmpdeb rustdesk.deb;')
-
-    system2('/bin/rm -rf tmpdeb/')
-    system2('/bin/rm -rf ../res/DEBIAN/control')
-    os.rename('rustdesk.deb', '../rustdesk-%s.deb' % version)
-    os.chdir("..")
 
 
 def build_flutter_dmg(version, features):
@@ -406,16 +284,6 @@ def build_flutter_dmg(version, features):
     '''
     os.chdir("..")
 
-
-def build_flutter_arch_manjaro(version, features):
-    if not skip_cargo:
-        system2(f'cargo build --features {features} --lib --release')
-    ffi_bindgen_function_refactor()
-    os.chdir('flutter')
-    system2('flutter build linux --release')
-    system2(f'strip {flutter_build_dir}/lib/librustdesk.so')
-    os.chdir('../res')
-    system2('HBB=`pwd`/.. FLUTTER=1 makepkg -f')
 
 
 def build_flutter_windows(version, features, skip_portable_pack):
@@ -468,9 +336,7 @@ def main():
         skip_cargo = True
     portable = args.portable
     package = args.package
-    if package:
-        build_deb_from_folder(version, package)
-        return
+
     res_dir = 'resources'
     external_resources(flutter, args, res_dir)
     if windows:
@@ -500,40 +366,6 @@ def main():
         system2(
             f'python3 ./generate.py -f ../../{res_dir} -o . -e ../../{res_dir}/rustdesk-{version}-win7-install.exe')
         system2('mv ../../{res_dir}/rustdesk-{version}-win7-install.exe ../..')
-    elif os.path.isfile('/usr/bin/pacman'):
-        # pacman -S -needed base-devel
-        system2("sed -i 's/pkgver=.*/pkgver=%s/g' res/PKGBUILD" % version)
-        if flutter:
-            build_flutter_arch_manjaro(version, features)
-        else:
-            system2('cargo build --release --features ' + features)
-            system2('git checkout src/ui/common.tis')
-            system2('strip target/release/rustdesk')
-            system2('ln -s res/pacman_install && ln -s res/PKGBUILD')
-            system2('HBB=`pwd` makepkg -f')
-        system2('mv rustdesk-%s-0-x86_64.pkg.tar.zst rustdesk-%s-manjaro-arch.pkg.tar.zst' % (
-            version, version))
-        # pacman -U ./rustdesk.pkg.tar.zst
-    elif os.path.isfile('/usr/bin/yum'):
-        system2('cargo build --release --features ' + features)
-        system2('strip target/release/rustdesk')
-        system2(
-            "sed -i 's/Version:    .*/Version:    %s/g' res/rpm.spec" % version)
-        system2('HBB=`pwd` rpmbuild -ba res/rpm.spec')
-        system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-fedora28-centos8.rpm' % (
-                version, version))
-        # yum localinstall rustdesk.rpm
-    elif os.path.isfile('/usr/bin/zypper'):
-        system2('cargo build --release --features ' + features)
-        system2('strip target/release/rustdesk')
-        system2(
-            "sed -i 's/Version:    .*/Version:    %s/g' res/rpm-suse.spec" % version)
-        system2('HBB=`pwd` rpmbuild -ba res/rpm-suse.spec')
-        system2(
-            'mv $HOME/rpmbuild/RPMS/x86_64/rustdesk-%s-0.x86_64.rpm ./rustdesk-%s-suse.rpm' % (
-                version, version))
-        # yum localinstall rustdesk.rpm
     else:
         if flutter:
             if osx:
