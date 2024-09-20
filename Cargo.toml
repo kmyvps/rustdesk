@@ -9,7 +9,7 @@ default-run = "kmdesk"
 rust-version = "1.75"
 
 [lib]
-name = "libkmdesk"
+name = "librustdesk"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [[bin]]
